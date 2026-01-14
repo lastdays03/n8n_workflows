@@ -77,7 +77,6 @@
                     "channelId": "={{ $json.channels.id }}"
                 },
                 "options": {
-                    "publishedAfter": "={{ $now.minus({ days: $node['Channel Configuration'].json.daysToCheck }).toISO() }}",
                     "order": "date"
                 }
             },

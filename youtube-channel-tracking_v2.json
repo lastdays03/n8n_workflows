@@ -553,9 +553,7 @@
                         "type": "main",
                         "index": 0
                     }
-                ]
-            ],
-            "input": [
+                ],
                 [
                     {
                         "node": "Fallback: OpenRouter (DeepSeek)",

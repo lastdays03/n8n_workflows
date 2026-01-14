@@ -69,14 +69,15 @@
         },
         {
             "parameters": {
-                "operation": "search",
-                "searchQuery": "={{ $json.keywords }}",
-                "returnAll": false,
-                "maxResults": "={{ $node['Configuration'].json.maxResultsPerKeyword }}",
+                "resource": "video",
+                "operation": "getAll",
+                "limit": "={{ $node['Configuration'].json.maxResultsPerKeyword }}",
+                "filters": {
+                    "search": "={{ $json.keywords }}"
+                },
                 "options": {
                     "publishedAfter": "={{ $now.minus({ days: $node['Configuration'].json.daysToSearch }).toISO() }}",
-                    "order": "date",
-                    "videoType": "video"
+                    "order": "date"
                 }
             },
             "id": "youtube-search",

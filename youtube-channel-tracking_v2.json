@@ -113,7 +113,7 @@
             "parameters": {
                 "resource": "database",
                 "operation": "getAll",
-                "databaseId": "YOUR_NOTION_DATABASE_ID",
+                "databaseId": "2e8b9482d22680d9a747f1f71ec7c8dd",
                 "returnAll": false,
                 "limit": 100,
                 "options": {
@@ -339,7 +339,7 @@
             "parameters": {
                 "resource": "databasePage",
                 "operation": "create",
-                "databaseId": "YOUR_NOTION_DATABASE_ID",
+                "databaseId": "2e8b9482d22680d9a747f1f71ec7c8dd",
                 "properties": {
                     "property": [
                         {

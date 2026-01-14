@@ -218,7 +218,7 @@
         {
             "parameters": {},
             "id": "try-catch-kw",
-            "name": "Try (Fallback)",
+            "name": "Try_Fallback",
             "type": "n8n-nodes-base.try",
             "typeVersion": 1,
             "position": [
@@ -253,7 +253,7 @@
                 "options": {}
             },
             "id": "groq-api-kw",
-            "name": "Primary: Groq (Llama 3.3)",
+            "name": "Primary_Groq",
             "type": "n8n-nodes-base.httpRequest",
             "typeVersion": 4.1,
             "position": [
@@ -299,7 +299,7 @@
                 }
             },
             "id": "openrouter-api-kw",
-            "name": "Fallback: OpenRouter (DeepSeek)",
+            "name": "Fallback_OpenRouter",
             "type": "n8n-nodes-base.httpRequest",
             "typeVersion": 4.1,
             "position": [
@@ -533,32 +533,32 @@
             "main": [
                 [
                     {
-                        "node": "Try (Fallback)",
+                        "node": "Try_Fallback",
                         "type": "main",
                         "index": 0
                     }
                 ]
             ]
         },
-        "Try (Fallback)": {
+        "Try_Fallback": {
             "main": [
                 [
                     {
-                        "node": "Primary: Groq (Llama 3.3)",
+                        "node": "Primary_Groq",
                         "type": "main",
                         "index": 0
                     }
                 ],
                 [
                     {
-                        "node": "Fallback: OpenRouter (DeepSeek)",
+                        "node": "Fallback_OpenRouter",
                         "type": "main",
                         "index": 0
                     }
                 ]
             ]
         },
-        "Primary: Groq (Llama 3.3)": {
+        "Primary_Groq": {
             "main": [
                 [
                     {
@@ -569,7 +569,7 @@
                 ]
             ]
         },
-        "Fallback: OpenRouter (DeepSeek)": {
+        "Fallback_OpenRouter": {
             "main": [
                 [
                     {

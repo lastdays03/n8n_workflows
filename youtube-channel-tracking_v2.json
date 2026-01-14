@@ -553,7 +553,9 @@
                         "type": "main",
                         "index": 0
                     }
-                ],
+                ]
+            ],
+            "error": [
                 [
                     {
                         "node": "Fallback_OpenRouter",

@@ -193,7 +193,11 @@
             },
             "id": "get-transcript-channel",
             "name": "Get YouTube Transcript",
-            "type": "n8n-nodes-youtube-transcript.youtubeTranscript"
+            "type": "n8n-nodes-youtube-transcript.youtubeTranscript",
+            "position": [
+                1650,
+                300
+            ]
         },
         {
             "parameters": {

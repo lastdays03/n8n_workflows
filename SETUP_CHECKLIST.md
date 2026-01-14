@@ -9,6 +9,7 @@
   - [ ] 셀프 호스팅 (`npx n8n` 또는 Docker)
 - [ ] Notion 계정 생성
 - [ ] Google 계정 (YouTube API용)
+- [ ] **n8n Community Node 설치**: `n8n-nodes-youtube-transcript` (Settings > Community Nodes)
 - [ ] **무료 AI API 계정** (Groq 및 OpenRouter)
 
 ## ✅ 2단계: API 키 발급

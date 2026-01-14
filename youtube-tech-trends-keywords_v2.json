@@ -1,0 +1,636 @@
+{
+    "name": "YouTube Tech Trends - Keyword Search (Free AI v2)",
+    "nodes": [
+        {
+            "parameters": {
+                "rule": {
+                    "interval": [
+                        {
+                            "field": "cronExpression",
+                            "expression": "0 9 * * *"
+                        }
+                    ]
+                }
+            },
+            "id": "schedule-trigger",
+            "name": "Schedule Trigger",
+            "type": "n8n-nodes-base.scheduleTrigger",
+            "typeVersion": 1.2,
+            "position": [
+                250,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "values": {
+                    "string": [
+                        {
+                            "name": "keywords",
+                            "value": "={{ [\"kubernetes\", \"docker\", \"terraform\", \"AWS\", \"React\", \"Next.js\", \"FastAPI\", \"Python\", \"TypeScript\", \"AI\", \"Machine Learning\", \"MLOps\"] }}"
+                        }
+                    ],
+                    "number": [
+                        {
+                            "name": "daysToSearch",
+                            "value": 7
+                        },
+                        {
+                            "name": "maxResultsPerKeyword",
+                            "value": 5
+                        }
+                    ]
+                },
+                "options": {}
+            },
+            "id": "config-node",
+            "name": "Configuration",
+            "type": "n8n-nodes-base.set",
+            "typeVersion": 3.3,
+            "position": [
+                450,
+                300
+            ],
+            "notes": "여기서 검색할 기술 키워드를 수정하세요"
+        },
+        {
+            "parameters": {
+                "fieldToSplitOut": "keywords",
+                "options": {}
+            },
+            "id": "split-keywords",
+            "name": "Split Keywords",
+            "type": "n8n-nodes-base.splitOut",
+            "typeVersion": 1,
+            "position": [
+                650,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "operation": "search",
+                "searchQuery": "={{ $json.keywords }}",
+                "returnAll": false,
+                "maxResults": "={{ $node['Configuration'].json.maxResultsPerKeyword }}",
+                "options": {
+                    "publishedAfter": "={{ $now.minus({ days: $node['Configuration'].json.daysToSearch }).toISO() }}",
+                    "order": "date",
+                    "videoType": "video"
+                }
+            },
+            "id": "youtube-search",
+            "name": "YouTube Search",
+            "type": "n8n-nodes-base.youtube",
+            "typeVersion": 1,
+            "position": [
+                850,
+                300
+            ],
+            "credentials": {
+                "youTubeOAuth2Api": {
+                    "id": "YOUR_YOUTUBE_CREDENTIAL_ID",
+                    "name": "YouTube OAuth2 account"
+                }
+            }
+        },
+        {
+            "parameters": {
+                "jsCode": "// 중복 제거 및 데이터 정제\nconst items = $input.all();\nconst uniqueVideos = {};\n\nfor (const item of items) {\n  const videoId = item.json.id?.videoId || item.json.id;\n  \n  if (!uniqueVideos[videoId]) {\n    uniqueVideos[videoId] = {\n      videoId: videoId,\n      title: item.json.snippet?.title || '',\n      description: item.json.snippet?.description || '',\n      channelTitle: item.json.snippet?.channelTitle || '',\n      channelId: item.json.snippet?.channelId || '',\n      publishedAt: item.json.snippet?.publishedAt || '',\n      thumbnails: item.json.snippet?.thumbnails || {},\n      videoUrl: `https://www.youtube.com/watch?v=${videoId}`,\n      searchKeyword: item.json.keywords\n    };\n  }\n}\n\nreturn Object.values(uniqueVideos).map(video => ({ json: video }));"
+            },
+            "id": "deduplicate",
+            "name": "Deduplicate & Format",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                1050,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "resource": "database",
+                "operation": "getAll",
+                "databaseId": "YOUR_NOTION_DATABASE_ID",
+                "returnAll": false,
+                "limit": 100,
+                "options": {
+                    "filter": {
+                        "property": "URL",
+                        "type": "url",
+                        "url": {
+                            "equals": "={{ $json.videoUrl }}"
+                        }
+                    }
+                }
+            },
+            "id": "check-notion",
+            "name": "Check Notion for Duplicates",
+            "type": "n8n-nodes-base.notion",
+            "typeVersion": 2.1,
+            "position": [
+                1250,
+                300
+            ],
+            "credentials": {
+                "notionApi": {
+                    "id": "YOUR_NOTION_CREDENTIAL_ID",
+                    "name": "Notion account"
+                }
+            }
+        },
+        {
+            "parameters": {
+                "conditions": {
+                    "options": {
+                        "caseSensitive": true,
+                        "leftValue": "",
+                        "typeValidation": "strict"
+                    },
+                    "conditions": [
+                        {
+                            "id": "filter-new-videos",
+                            "leftValue": "={{ $json.object }}",
+                            "rightValue": "list",
+                            "operator": {
+                                "type": "string",
+                                "operation": "equals"
+                            }
+                        },
+                        {
+                            "id": "filter-empty-results",
+                            "leftValue": "={{ $json.results.length }}",
+                            "rightValue": "0",
+                            "operator": {
+                                "type": "number",
+                                "operation": "equals"
+                            }
+                        }
+                    ],
+                    "combinator": "and"
+                },
+                "options": {}
+            },
+            "id": "filter-new",
+            "name": "Filter New Videos Only",
+            "type": "n8n-nodes-base.filter",
+            "typeVersion": 2,
+            "position": [
+                1450,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "operation": "getTranscript",
+                "videoId": "={{ $json.videoId }}",
+                "options": {
+                    "languages": [
+                        "ko",
+                        "en"
+                    ]
+                }
+            },
+            "id": "get-transcript",
+            "name": "Get YouTube Transcript",
+            "type": "@n8n/n8n-nodes-langchain.youtubeTranscript",
+            "typeVersion": 1,
+            "position": [
+                1650,
+                300
+            ],
+            "continueOnFail": true,
+            "notes": "자막을 가져올 수 없는 경우에도 계속 진행"
+        },
+        {
+            "parameters": {
+                "jsCode": "// 자막 텍스트 결합 및 요약을 위한 준비\nconst item = $input.first().json;\n\nlet transcriptText = '';\nif (item.transcript && Array.isArray(item.transcript)) {\n  transcriptText = item.transcript.map(t => t.text).join(' ');\n} else if (item.error) {\n  transcriptText = 'NO_TRANSCRIPT_AVAILABLE';\n}\n\n// 토큰 제한을 위해 최대 15000자로 제한 (Groq Llama 3.3은 128k context 지원하지만 안전하게)\nif (transcriptText.length > 15000) {\n  transcriptText = transcriptText.substring(0, 15000) + '...';\n}\n\nreturn {\n  json: {\n    ...item,\n    transcriptText: transcriptText,\n    hasTranscript: transcriptText !== 'NO_TRANSCRIPT_AVAILABLE'\n  }\n};"
+            },
+            "id": "prepare-for-ai",
+            "name": "Prepare Transcript",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                1850,
+                300
+            ]
+        },
+        {
+            "parameters": {},
+            "id": "try-catch-kw",
+            "name": "Try (Fallback)",
+            "type": "n8n-nodes-base.try",
+            "typeVersion": 1,
+            "position": [
+                2050,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "method": "POST",
+                "url": "https://api.groq.com/openai/v1/chat/completions",
+                "authentication": "genericCredentialType",
+                "genericAuthType": "httpHeaderAuth",
+                "sendBody": true,
+                "contentType": "json",
+                "bodyParameters": {
+                    "parameters": [
+                        {
+                            "name": "model",
+                            "value": "llama-3.3-70b-versatile"
+                        },
+                        {
+                            "name": "messages",
+                            "value": "={{ [\n  {\n    \"role\": \"system\",\n    \"content\": \"당신은 기술 콘텐츠 분석 전문가입니다. 반드시 한국어로 요약해야 합니다.\"\n  },\n  {\n    \"role\": \"user\",\n    \"content\": `아래 유튜브 동영상을 분석해주세요:\\n\\n제목: ${$json.title}\\n채널: ${$json.channelTitle}\\n설명: ${$json.description}\\n${$json.hasTranscript ? '자막: ' + $json.transcriptText : ''}\\n\\n다음 형식으로 한국어로 요약해주세요:\\n\\n1. 핵심 내용 (3-5문장)\\n2. 주요 기술/키워드\\n3. 난이도 (초급/중급/고급)\\n4. 실무 적용도 (상/중/하)\\n5. 추천 대상\\n\\nIMPORTANT: Provide the output strictly in Korean.`\n  }\n] }}"
+                        },
+                        {
+                            "name": "temperature",
+                            "value": "0.6"
+                        }
+                    ]
+                },
+                "options": {}
+            },
+            "id": "groq-api-kw",
+            "name": "Primary: Groq (Llama 3.3)",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.1,
+            "position": [
+                2250,
+                200
+            ],
+            "credentials": {
+                "httpHeaderAuth": {
+                    "id": "YOUR_GROQ_CREDENTIAL_ID",
+                    "name": "Groq API Key"
+                }
+            }
+        },
+        {
+            "parameters": {
+                "method": "POST",
+                "url": "https://openrouter.ai/api/v1/chat/completions",
+                "authentication": "genericCredentialType",
+                "genericAuthType": "httpHeaderAuth",
+                "sendBody": true,
+                "contentType": "json",
+                "bodyParameters": {
+                    "parameters": [
+                        {
+                            "name": "model",
+                            "value": "deepseek/deepseek-r1:free"
+                        },
+                        {
+                            "name": "messages",
+                            "value": "={{ [\n  {\n    \"role\": \"system\",\n    \"content\": \"당신은 기술 콘텐츠 분석 전문가입니다. 반드시 한국어로 요약해야 합니다.\"\n  },\n  {\n    \"role\": \"user\",\n    \"content\": `아래 유튜브 동영상을 분석해주세요:\\n\\n제목: ${$node['Prepare Transcript'].json.title}\\n채널: ${$node['Prepare Transcript'].json.channelTitle}\\n설명: ${$node['Prepare Transcript'].json.description}\\n${$node['Prepare Transcript'].json.hasTranscript ? '자막: ' + $node['Prepare Transcript'].json.transcriptText : ''}\\n\\n다음 형식으로 한국어로 요약해주세요:\\n\\n1. 핵심 내용 (3-5문장)\\n2. 주요 기술/키워드\\n3. 난이도 (초급/중급/고급)\\n4. 실무 적용도 (상/중/하)\\n5. 추천 대상\\n\\nIMPORTANT: Provide the output strictly in Korean.`\n  }\n] }}"
+                        }
+                    ]
+                },
+                "options": {
+                    "headerParameters": {
+                        "parameters": [
+                            {
+                                "name": "HTTP-Referer",
+                                "value": "https://n8n.io"
+                            }
+                        ]
+                    }
+                }
+            },
+            "id": "openrouter-api-kw",
+            "name": "Fallback: OpenRouter (DeepSeek)",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.1,
+            "position": [
+                2250,
+                450
+            ],
+            "credentials": {
+                "httpHeaderAuth": {
+                    "id": "YOUR_OPENROUTER_CREDENTIAL_ID",
+                    "name": "OpenRouter API Key"
+                }
+            }
+        },
+        {
+            "parameters": {
+                "jsCode": "// AI 응답 파싱 및 최종 데이터 구조화\nconst items = $input.all();\nconst item = items[0].json;\n\n// HTTP Request 결과 파싱\nlet aiSummary = '';\nif (item.choices && item.choices[0]?.message?.content) {\n  aiSummary = item.choices[0].message.content;\n} else if (item.content) {\n  aiSummary = item.content;\n} else {\n  aiSummary = 'AI Summary Failed';\n}\n\n// Prepare Transcript 노드의 원본 메타데이터 가져오기\nconst originalData = $node['Prepare Transcript'].json;\n\nreturn {\n  json: {\n    title: originalData.title,\n    url: originalData.videoUrl,\n    channelName: originalData.channelTitle,\n    channelId: originalData.channelId,\n    publishedDate: originalData.publishedAt,\n    collectedDate: new Date().toISOString(),\n    searchKeyword: originalData.searchKeyword || originalData.keywords || [],\n    aiSummary: aiSummary,\n    description: originalData.description,\n    thumbnailUrl: originalData.thumbnails?.high?.url || originalData.thumbnails?.default?.url || '',\n    hasTranscript: originalData.hasTranscript,\n    status: '미확인'\n  }\n};"
+            },
+            "id": "format-for-notion",
+            "name": "Format for Notion",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                2550,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "resource": "databasePage",
+                "operation": "create",
+                "databaseId": "YOUR_NOTION_DATABASE_ID",
+                "properties": {
+                    "property": [
+                        {
+                            "key": "제목",
+                            "type": "title",
+                            "title": "={{ $json.title }}"
+                        },
+                        {
+                            "key": "URL",
+                            "type": "url",
+                            "url": "={{ $json.url }}"
+                        },
+                        {
+                            "key": "채널",
+                            "type": "richText",
+                            "richText": "={{ $json.channelName }}"
+                        },
+                        {
+                            "key": "등록일",
+                            "type": "date",
+                            "date": "={{ $json.publishedDate }}"
+                        },
+                        {
+                            "key": "수집일",
+                            "type": "date",
+                            "date": "={{ $json.collectedDate }}"
+                        },
+                        {
+                            "key": "기술태그",
+                            "type": "multiSelect",
+                            "multiSelect": "={{ $json.searchKeyword }}"
+                        },
+                        {
+                            "key": "AI요약",
+                            "type": "richText",
+                            "richText": "={{ $json.aiSummary }}"
+                        },
+                        {
+                            "key": "상태",
+                            "type": "select",
+                            "select": "={{ $json.status }}"
+                        },
+                        {
+                            "key": "자막여부",
+                            "type": "checkbox",
+                            "checkbox": "={{ $json.hasTranscript }}"
+                        }
+                    ]
+                },
+                "options": {
+                    "icon": {
+                        "type": "emoji",
+                        "emoji": "🎥"
+                    }
+                }
+            },
+            "id": "create-notion-page",
+            "name": "Create Notion Page",
+            "type": "n8n-nodes-base.notion",
+            "typeVersion": 2.1,
+            "position": [
+                2750,
+                300
+            ],
+            "credentials": {
+                "notionApi": {
+                    "id": "YOUR_NOTION_CREDENTIAL_ID",
+                    "name": "Notion account"
+                }
+            }
+        },
+        {
+            "parameters": {
+                "jsCode": "// 실행 결과 통계 생성\nconst items = $input.all();\n\nconst stats = {\n  totalProcessed: items.length,\n  successCount: items.filter(i => i.json.id).length,\n  failCount: items.filter(i => !i.json.id).length,\n  keywords: [...new Set(items.map(i => i.json.properties?.['기술태그']?.multi_select?.[0]?.name || 'Unknown'))],\n  timestamp: new Date().toISOString()\n};\n\nreturn { json: stats };"
+            },
+            "id": "generate-stats",
+            "name": "Generate Statistics",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                2950,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "operation": "sendMessage",
+                "channel": "#tech-trends",
+                "text": "=🎯 YouTube 기술 트렌드 수집 완료! (Free AI)\n\n✅ 처리된 동영상: {{ $json.totalProcessed }}개\n✅ Notion 저장 성공: {{ $json.successCount }}개\n❌ 실패: {{ $json.failCount }}개\n\n🏷️ 수집 키워드: {{ $json.keywords.join(', ') }}\n\n⏰ 수집 시각: {{ $json.timestamp }}",
+                "otherOptions": {}
+            },
+            "id": "slack-notification",
+            "name": "Slack Notification",
+            "type": "n8n-nodes-base.slack",
+            "typeVersion": 2.1,
+            "position": [
+                3150,
+                300
+            ],
+            "credentials": {
+                "slackApi": {
+                    "id": "YOUR_SLACK_CREDENTIAL_ID",
+                    "name": "Slack account"
+                }
+            },
+            "disabled": true,
+            "notes": "선택사항: Slack 알림이 필요한 경우 활성화하고 credentials를 설정하세요"
+        }
+    ],
+    "connections": {
+        "Schedule Trigger": {
+            "main": [
+                [
+                    {
+                        "node": "Configuration",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Configuration": {
+            "main": [
+                [
+                    {
+                        "node": "Split Keywords",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Split Keywords": {
+            "main": [
+                [
+                    {
+                        "node": "YouTube Search",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "YouTube Search": {
+            "main": [
+                [
+                    {
+                        "node": "Deduplicate & Format",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Deduplicate & Format": {
+            "main": [
+                [
+                    {
+                        "node": "Check Notion for Duplicates",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Check Notion for Duplicates": {
+            "main": [
+                [
+                    {
+                        "node": "Filter New Videos Only",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Filter New Videos Only": {
+            "main": [
+                [
+                    {
+                        "node": "Get YouTube Transcript",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Get YouTube Transcript": {
+            "main": [
+                [
+                    {
+                        "node": "Prepare Transcript",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Prepare Transcript": {
+            "main": [
+                [
+                    {
+                        "node": "Try (Fallback)",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Try (Fallback)": {
+            "main": [
+                [
+                    {
+                        "node": "Primary: Groq (Llama 3.3)",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ],
+            "input": [
+                [
+                    {
+                        "node": "Fallback: OpenRouter (DeepSeek)",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Primary: Groq (Llama 3.3)": {
+            "main": [
+                [
+                    {
+                        "node": "Format for Notion",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Fallback: OpenRouter (DeepSeek)": {
+            "main": [
+                [
+                    {
+                        "node": "Format for Notion",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Format for Notion": {
+            "main": [
+                [
+                    {
+                        "node": "Create Notion Page",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Create Notion Page": {
+            "main": [
+                [
+                    {
+                        "node": "Generate Statistics",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Generate Statistics": {
+            "main": [
+                [
+                    {
+                        "node": "Slack Notification",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        }
+    },
+    "settings": {
+        "executionOrder": "v1"
+    },
+    "tags": [
+        {
+            "name": "YouTube",
+            "id": "tag-youtube"
+        },
+        {
+            "name": "Tech Trends",
+            "id": "tag-tech"
+        },
+        {
+            "name": "FreeAI",
+            "id": "tag-free-ai"
+        }
+    ]
+}

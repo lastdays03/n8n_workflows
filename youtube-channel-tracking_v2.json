@@ -70,10 +70,12 @@
         },
         {
             "parameters": {
-                "operation": "channelVideos",
-                "channelId": "={{ $json.channels.id }}",
-                "returnAll": false,
-                "maxResults": "={{ $node['Channel Configuration'].json.maxVideosPerChannel }}",
+                "resource": "video",
+                "operation": "getAll",
+                "limit": "={{ $node['Channel Configuration'].json.maxVideosPerChannel }}",
+                "filters": {
+                    "channelId": "={{ $json.channels.id }}"
+                },
                 "options": {
                     "publishedAfter": "={{ $now.minus({ days: $node['Channel Configuration'].json.daysToCheck }).toISO() }}",
                     "order": "date"

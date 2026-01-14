@@ -81,7 +81,7 @@
             },
             "id": "get-channel-videos",
             "name": "Get Channel Videos",
-            "type": "n8n-nodes-base.youtube",
+            "type": "n8n-nodes-base.youTube",
             "typeVersion": 1,
             "position": [
                 850,

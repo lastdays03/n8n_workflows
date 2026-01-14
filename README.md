@@ -14,93 +14,95 @@ n8n을 사용하여 YouTube의 기술 트렌드를 자동으로 수집, 분류�
 
 ## 🗂️ 워크플로우 구성
 
-### 1. `youtube-tech-trends-keywords.json`
-**기술 키워드 기반 검색 워크플로우**
+### 1. `youtube-tech-trends-keywords_v2.json` (New! ✨)
+**기술 키워드 기반 검색 + 무료 AI Fallback 워크플로우**
 
 - **실행 시간**: 매일 오전 9시 (크론: `0 9 * * *`)
+- **AI 엔진**: **Groq (Llama 3.3)** → 실패 시 **OpenRouter (DeepSeek)** 자동 전환
 - **수집 방식**: 설정된 기술 키워드로 YouTube 검색
-- **검색 범위**: 최근 7일 이내 동영상
-- **키워드당 수집**: 최대 5개 동영상
+- **비용**: **완전 무료** ($0)
 
 **처리 플로우**:
 ```
 스케줄 트리거 → 설정 로드 → 키워드 분할 → YouTube 검색
 → 중복 제거 → Notion 중복 체크 → 신규 필터링
-→ 자막 추출 → AI 요약 → Notion 저장 → 통계 생성 → Slack 알림
+→ 자막 추출 → [Try: Groq] -(에러)-> [Catch: OpenRouter] 
+→ Notion 저장 → 통계 생성 → Slack 알림
 ```
 
-### 2. `youtube-channel-tracking.json`
-**특정 채널 추적 워크플로우**
+### 2. `youtube-channel-tracking_v2.json` (New! ✨)
+**특정 채널 추적 + 무료 AI Fallback 워크플로우**
 
 - **실행 시간**: 매일 오후 6시 (크론: `0 18 * * *`)
+- **AI 엔진**: **Groq** (속도) / **OpenRouter** (안정성)
 - **수집 방식**: 지정된 채널의 최신 동영상 조회
-- **검색 범위**: 최근 3일 이내 동영상
-- **채널당 수집**: 최대 10개 동영상
+- **비용**: **완전 무료** ($0)
 
 **처리 플로우**:
 ```
 스케줄 트리거 → 채널 설정 로드 → 채널 분할 → 채널 동영상 조회
 → 데이터 포맷 → Notion 중복 체크 → 신규 필터링
-→ 자막 추출 → AI 요약 → Notion 저장 → 통계 생성 → Slack 알림
+→ 자막 추출 → [Try: Groq] -(에러)-> [Catch: OpenRouter]
+→ Notion 저장 → 통계 생성 → Slack 알림
 ```
 
 ## 🛠️ 설치 및 설정
 
 ### 1. 사전 요구사항
-
-- **n8n 설치** (클라우드 또는 셀프 호스팅)
-  - 클라우드: https://n8n.io (월 $20)
-  - 셀프 호스팅: `npx n8n` 또는 Docker
-- **YouTube Data API v3 키**
-- **OpenAI API 키** (또는 Claude API)
-- **Notion 계정 및 Integration**
-
-### 2. API 키 발급
-
-#### YouTube API
-1. [Google Cloud Console](https://console.cloud.google.com/) 접속
-2. 프로젝트 생성 또는 선택
-3. "API 및 서비스" → "라이브러리" → "YouTube Data API v3" 활성화
-4. "사용자 인증 정보" → "OAuth 2.0 클라이언트 ID" 생성
-5. n8n에서 YouTube OAuth2 연결 설정
-
-**쿼터 정보**:
-- 무료: 하루 10,000 쿼터
-- 검색 1회 = 100 쿼터
-- 하루 약 100회 검색 가능
-
-#### OpenAI API
-1. [OpenAI Platform](https://platform.openai.com/) 접속
-2. API Keys → "Create new secret key"
-3. 생성된 키를 안전하게 보관
-
-**비용 예상**:
-- GPT-4o-mini: ~$0.15/1M 토큰
-- 동영상 1개 요약: ~2,000 토큰
-- 하루 20개 처리 시: ~$0.01
-
-#### Notion Integration
-1. [Notion Integrations](https://www.notion.so/my-integrations) 접속
-2. "New integration" 생성
-3. Integration Token 복사
-4. Notion 데이터베이스에서 "연결 추가" → Integration 연결
+ 
+ - **n8n 설치**
+   - 클라우드 또는 셀프 호스팅 (Docker 등)
+ - **YouTube Data API v3 키**
+ - **Notion 계정 및 Integration**
+ - **무료 AI API 키** (다음 중 1개 이상 권장):
+   - **Groq API 키** (1순위 추천)
+   - **OpenRouter API 키** (DeepSeek, Gemma 등 사용 시)
+   - Google Gemini API 키
+ 
+ ### 2. API 키 발급
+ 
+ #### YouTube API
+ 1. [Google Cloud Console](https://console.cloud.google.com/) 접속
+ 2. 프로젝트 생성 또는 선택
+ 3. "API 및 서비스" → "라이브러리" → "YouTube Data API v3" 활성화
+ 4. "사용자 인증 정보" → "OAuth 2.0 클라이언트 ID" 생성
+ 5. n8n에서 YouTube OAuth2 연결 설정
+ 
+ **쿼터 정보**:
+ - 무료: 하루 10,000 쿼터
+ - 검색 1회 = 100 쿼터
+ - 하루 약 100회 검색 가능
+ 
+ #### 🌟 Groq API (추천)
+ 1. [Groq Console](https://console.groq.com/keys) 접속
+ 2. `Create API Key` 클릭 후 키 복사
+ 
+ #### OpenRouter API
+ 1. [OpenRouter](https://openrouter.ai/keys) 접속
+ 2. 키 생성 (Credit 없어도 Free 모델 사용 가능)
+ 
+ #### Notion Integration
+ 1. [Notion Integrations](https://www.notion.so/my-integrations) 접속
+ 2. "New integration" 생성
+ 3. Integration Token 복사
+ 4. Notion 데이터베이스에서 "연결 추가" → Integration 연결
 
 ### 3. Notion 데이터베이스 생성
 
 다음 속성을 가진 Notion 데이터베이스를 생성하세요:
 
-| 속성명 | 타입 | 설명 |
-|--------|------|------|
-| 제목 | Title | 동영상 제목 |
-| URL | URL | 동영상 링크 |
-| 채널 | Text | 채널명 |
-| 등록일 | Date | 동영상 게시일 |
-| 수집일 | Date | 수집한 날짜 |
-| 기술태그 | Multi-select | 관련 기술 카테고리 |
-| AI요약 | Text | AI가 생성한 요약 |
-| 상태 | Select | 미확인/확인완료/중요/나중에 |
-| 자막여부 | Checkbox | 자막 사용 가능 여부 |
-| 수집방식 | Select | 키워드검색/채널추적 |
+| 속성명   | 타입         | 설명                        |
+| -------- | ------------ | --------------------------- |
+| 제목     | Title        | 동영상 제목                 |
+| URL      | URL          | 동영상 링크                 |
+| 채널     | Text         | 채널명                      |
+| 등록일   | Date         | 동영상 게시일               |
+| 수집일   | Date         | 수집한 날짜                 |
+| 기술태그 | Multi-select | 관련 기술 카테고리          |
+| AI요약   | Text         | AI가 생성한 요약            |
+| 상태     | Select       | 미확인/확인완료/중요/나중에 |
+| 자막여부 | Checkbox     | 자막 사용 가능 여부         |
+| 수집방식 | Select       | 키워드검색/채널추적         |
 
 **데이터베이스 ID 확인 방법**:
 ```
@@ -109,28 +111,34 @@ https://www.notion.so/workspace/DATABASE_ID?v=...
 ```
 
 ### 4. n8n 워크플로우 Import
-
-1. n8n 대시보드 접속
-2. "Import from File" 클릭
-3. `youtube-tech-trends-keywords.json` 선택하여 import
-4. `youtube-channel-tracking.json` 선택하여 import
-
-### 5. Credentials 설정
-
-각 워크플로우에서 다음 credentials를 설정하세요:
-
-#### YouTube OAuth2
-- n8n에서 "Credentials" → "Add Credential" → "YouTube OAuth2 API"
-- Google Cloud Console에서 발급받은 Client ID/Secret 입력
-- OAuth 인증 완료
-
-#### OpenAI API
-- n8n에서 "Credentials" → "Add Credential" → "OpenAI API"
-- API Key 입력
-
-#### Notion API
-- n8n에서 "Credentials" → "Add Credential" → "Notion API"
-- Integration Token 입력
+ 
+ 1. n8n 대시보드 접속
+ 2. "Import from File" 클릭
+ 3. `youtube-tech-trends-keywords_v2.json` 선택하여 import
+ 4. `youtube-channel-tracking_v2.json` 선택하여 import
+ 
+ ### 5. Credentials 설정
+ 
+ 각 워크플로우에서 다음 credentials를 설정하세요:
+ 
+ #### YouTube OAuth2
+ - n8n에서 "Credentials" → "Add Credential" → "YouTube OAuth2 API"
+ - Google Cloud Console에서 발급받은 Client ID/Secret 입력
+ - OAuth 인증 완료
+ 
+ #### Groq API (Header Auth)
+ - n8n에서 "Credentials" → "Add Credential" → "Header Auth" (또는 "Groq API")
+ - Name: `Authorization`
+ - Value: `Bearer gsk_...` (키 앞에 Bearer 붙여야 함)
+ 
+ #### OpenRouter API (Header Auth)
+ - n8n에서 "Credentials" → "Add Credential" → "Header Auth"
+ - Name: `Authorization`
+ - Value: `Bearer sk-or-...`
+ 
+ #### Notion API
+ - n8n에서 "Credentials" → "Add Credential" → "Notion API"
+ - Integration Token 입력
 
 ### 6. 워크플로우 설정 수정
 

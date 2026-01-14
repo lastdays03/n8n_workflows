@@ -193,7 +193,7 @@
             },
             "id": "get-transcript",
             "name": "Get YouTube Transcript",
-            "type": "n8n-nodes-youtube-transcript.youtubeTranscript",
+            "type": "n8n-nodes-youtube-transcript.youTubeTranscript",
             "position": [
                 1650,
                 300
